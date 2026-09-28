@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Elite 8-Player Board Game (Supabase)</title>
+    <title>Elite 8-Player Board Game</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -19,22 +19,19 @@
 </head>
 <body class="bg-slate-950 text-white min-h-screen flex flex-col items-center justify-center p-4">
 
-    <!-- Toast Container -->
     <div id="toast-container" class="fixed top-5 right-5 space-y-2 z-50"></div>
 
-    <!-- Main Container -->
     <div class="w-full max-w-5xl mx-auto">
-
         <!-- Setup Screen -->
         <div id="setup-screen" class="glass rounded-3xl p-8 shadow-2xl">
             <h1 class="text-4xl font-extrabold text-center mb-2 bg-gradient-to-r from-indigo-400 to-purple-400 text-transparent bg-clip-text">Elite Board Arena</h1>
-            <p class="text-slate-400 text-center mb-8">Powered by Supabase Realtime</p>
+            <p class="text-slate-400 text-center mb-8">8-Player Ludo & Snake & Ladder</p>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="bg-slate-800/50 p-6 rounded-2xl border border-slate-700 hover:border-indigo-500 transition-all cursor-pointer" onclick="createRoom('Ludo')">
                     <div class="text-5xl mb-4">🎲</div>
                     <h2 class="text-xl font-bold mb-2">Create Ludo Room</h2>
-                    <p class="text-slate-400 text-sm">Become the Admin. Generate a code and invite 7 friends.</p>
+                    <p class="text-slate-400 text-sm">You become the Admin. Invite up to 7 friends.</p>
                 </div>
                 <div class="bg-slate-800/50 p-6 rounded-2xl border border-slate-700 hover:border-purple-500 transition-all cursor-pointer" onclick="createRoom('SnakeAndLadder')">
                     <div class="text-5xl mb-4">🐍</div>
@@ -83,7 +80,6 @@
         <!-- Game Screen -->
         <div id="game-screen" class="hidden">
             <div class="flex flex-col md:flex-row gap-6">
-                <!-- Left Side: Board & Controls -->
                 <div class="flex-1 glass rounded-3xl p-6">
                     <div class="flex justify-between items-center mb-4">
                         <h3 id="turn-indicator" class="text-xl font-bold text-indigo-400">Waiting...</h3>
@@ -93,11 +89,10 @@
                     <div id="game-board" class="relative grid grid-cols-10 gap-0.5 bg-slate-900 p-2 rounded-xl aspect-square"></div>
 
                     <div id="log-area" class="mt-4 h-24 bg-slate-900/80 rounded-xl p-3 overflow-y-auto text-sm font-mono text-slate-400 border border-slate-800">
-                        <p class="text-slate-500">Game started. Waiting for first roll...</p>
+                        <p class="text-slate-500">Game started. Admin goes first!</p>
                     </div>
                 </div>
 
-                <!-- Right Side: Dice & Admin Panel -->
                 <div class="md:w-64 flex flex-col gap-6">
                     <div class="glass rounded-3xl p-6 flex flex-col items-center">
                         <h3 class="text-slate-400 uppercase tracking-wider text-xs mb-4">Your Dice</h3>
@@ -115,12 +110,12 @@
                         </div>
                         <p class="text-xs text-slate-400 mb-4">Choose your next roll.</p>
                         <div class="grid grid-cols-3 gap-2">
-                            <button class="rig-btn bg-slate-800 hover:bg-red-600 py-2 rounded-lg font-bold" onclick="rigDice(1)">1</button>
-                            <button class="rig-btn bg-slate-800 hover:bg-red-600 py-2 rounded-lg font-bold" onclick="rigDice(2)">2</button>
-                            <button class="rig-btn bg-slate-800 hover:bg-red-600 py-2 rounded-lg font-bold" onclick="rigDice(3)">3</button>
-                            <button class="rig-btn bg-slate-800 hover:bg-red-600 py-2 rounded-lg font-bold" onclick="rigDice(4)">4</button>
-                            <button class="rig-btn bg-slate-800 hover:bg-red-600 py-2 rounded-lg font-bold" onclick="rigDice(5)">5</button>
-                            <button class="rig-btn bg-slate-800 hover:bg-red-600 py-2 rounded-lg font-bold" onclick="rigDice(6)">6</button>
+                            <button class="rig-btn bg-slate-800 hover:bg-red-600 py-2 rounded-lg font-bold disabled:opacity-30" disabled onclick="rigDice(1)">1</button>
+                            <button class="rig-btn bg-slate-800 hover:bg-red-600 py-2 rounded-lg font-bold disabled:opacity-30" disabled onclick="rigDice(2)">2</button>
+                            <button class="rig-btn bg-slate-800 hover:bg-red-600 py-2 rounded-lg font-bold disabled:opacity-30" disabled onclick="rigDice(3)">3</button>
+                            <button class="rig-btn bg-slate-800 hover:bg-red-600 py-2 rounded-lg font-bold disabled:opacity-30" disabled onclick="rigDice(4)">4</button>
+                            <button class="rig-btn bg-slate-800 hover:bg-red-600 py-2 rounded-lg font-bold disabled:opacity-30" disabled onclick="rigDice(5)">5</button>
+                            <button class="rig-btn bg-slate-800 hover:bg-red-600 py-2 rounded-lg font-bold disabled:opacity-30" disabled onclick="rigDice(6)">6</button>
                         </div>
                     </div>
                 </div>
@@ -129,16 +124,17 @@
     </div>
 
 <script>
-    // === SUPABASE CONFIG ===
-    // REPLACE THESE WITH YOUR SUPABASE PROJECT DETAILS
-    const SUPABASE_URL = 'YOUR_SUPABASE_URL';
-    const SUPABASE_KEY = 'YOUR_SUPABASE_ANON_KEY';
+    // === SUPABASE CONFIG (CONNECTED) ===
+    const SUPABASE_URL = 'https://yotrroqgqjygrtvdaxsr.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_rAOholHMOEoXfYbCHCp8lw_cXL0PtBO';
     
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     // === STATE VARIABLES ===
-    let currentRoomId = null;
-    let myPlayerId = (crypto.randomUUID) ? crypto.randomUUID() : Math.random().toString(36).substring(2);
+    let currentRoomId = localStorage.getItem('roomId') || null;
+    let myPlayerId = localStorage.getItem('playerId') || (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2));
+    localStorage.setItem('playerId', myPlayerId);
+
     let isAdmin = false;
     let gameData = null;
     let subscription = null;
@@ -178,12 +174,17 @@
     function handleStateChange() {
         if (!gameData) return;
 
+        const me = gameData.players.find(p => p.id === myPlayerId);
+        isAdmin = (gameData.admin_id === myPlayerId);
+
         if (gameData.is_started) {
             lobbyScreen.classList.add('hidden');
+            setupScreen.classList.add('hidden');
             gameScreen.classList.remove('hidden');
             renderGame();
         } else {
             setupScreen.classList.add('hidden');
+            gameScreen.classList.add('hidden');
             lobbyScreen.classList.remove('hidden');
             renderLobby();
         }
@@ -193,8 +194,10 @@
         document.getElementById('room-code').innerText = gameData.room_code;
         document.getElementById('game-type-text').innerText = gameData.game_type;
         
-        if (gameData.admin_id === myPlayerId) {
+        if (isAdmin) {
             document.getElementById('start-btn').classList.remove('hidden');
+        } else {
+            document.getElementById('start-btn').classList.add('hidden');
         }
 
         const slotsContainer = document.getElementById('player-slots');
@@ -220,14 +223,21 @@
         const currentPlayer = gameData.players[turnIndex];
         const indicator = document.getElementById('turn-indicator');
         
-        if(currentPlayer.id === myPlayerId) {
+        const isMyTurn = (currentPlayer.id === myPlayerId);
+        
+        if(isMyTurn) {
             indicator.innerText = "Your Turn!";
             indicator.className = "text-xl font-bold text-green-400";
             document.getElementById('roll-btn').disabled = false;
+            
+            if (isAdmin) {
+                document.querySelectorAll('.rig-btn').forEach(btn => btn.disabled = false);
+            }
         } else {
             indicator.innerText = `${currentPlayer.name}'s Turn`;
             indicator.className = "text-xl font-bold text-indigo-400";
             document.getElementById('roll-btn').disabled = true;
+            document.querySelectorAll('.rig-btn').forEach(btn => btn.disabled = true);
         }
     }
 
@@ -242,7 +252,6 @@
             board.appendChild(cell);
         }
         
-        // Render all player tokens
         gameData.players.forEach(p => {
             const cell = document.getElementById(`cell-${p.position}`);
             if(cell) {
@@ -256,9 +265,10 @@
 
     // === DATABASE ACTIONS ===
 
-    // Create Room
     async function createRoom(gameType) {
         const roomCode = Math.random().toString(36).substring(2, 6).toUpperCase();
+        showToast('Creating room...', 'info');
+        
         const newGame = {
             room_code: roomCode,
             game_type: gameType,
@@ -269,22 +279,26 @@
         };
 
         const { data, error } = await supabase.from('games').insert([newGame]).select().single();
-        if (error) return showToast('Error creating room', 'error');
+        if (error) {
+            console.error("Supabase Error:", error);
+            showToast('Database Error: ' + error.message, 'error');
+            return;
+        }
         
         currentRoomId = data.room_code;
-        isAdmin = true;
+        localStorage.setItem('roomId', currentRoomId);
+        
         gameData = data;
+        isAdmin = true;
         
         setupScreen.classList.add('hidden');
         lobbyScreen.classList.remove('hidden');
-        document.getElementById('start-btn').classList.remove('hidden');
         document.getElementById('room-code').innerText = currentRoomId;
         
         subscribeToRoom(currentRoomId);
         renderLobby();
     }
 
-    // Join Room
     async function joinRoom() {
         const roomId = document.getElementById('joinRoomId').value.trim();
         const name = document.getElementById('joinName').value.trim() || 'Player';
@@ -296,9 +310,9 @@
         if (data.is_started) return showToast('Game already started', 'error');
 
         currentRoomId = data.room_code;
+        localStorage.setItem('roomId', currentRoomId);
         gameData = data;
 
-        // Add player to JSONB array
         const newPlayer = {
             id: myPlayerId,
             name: name,
@@ -322,7 +336,6 @@
         renderLobby();
     }
 
-    // Start Game
     async function startGame() {
         const { error } = await supabase.from('games')
             .update({ is_started: true })
@@ -330,13 +343,11 @@
         if (error) showToast('Failed to start game', 'error');
     }
 
-    // Roll Dice (Normal)
     async function rollDice() {
         const diceValue = Math.floor(Math.random() * 6) + 1;
         await processTurn(diceValue, false);
     }
 
-    // Admin Rig Dice
     async function rigDice(value) {
         if (!isAdmin) return;
         document.getElementById('dice-display').innerText = value;
@@ -345,42 +356,66 @@
         await processTurn(value, true);
     }
 
-    // Core Turn Logic
     async function processTurn(diceValue, rigged) {
+        const { data: latestData, error: fetchError } = await supabase
+            .from('games')
+            .select('*')
+            .eq('room_code', currentRoomId)
+            .single();
+
+        if (fetchError || !latestData) return showToast('Failed to sync game state', 'error');
+        gameData = latestData;
+
         const turnIndex = gameData.current_turn_index;
         const currentPlayer = gameData.players[turnIndex];
 
-        if (currentPlayer.id !== myPlayerId) return showToast("Not your turn!", "error");
+        if (currentPlayer.id !== myPlayerId) {
+            showToast("It's not your turn!", 'error');
+            return;
+        }
 
-        document.getElementById('dice-display').innerText = diceValue;
-
-        // Update position
         currentPlayer.position += diceValue;
         if (currentPlayer.position > 99) currentPlayer.position = 99;
 
-        // Advance turn
         gameData.current_turn_index = (turnIndex + 1) % gameData.players.length;
 
-        // Update DB (This triggers Realtime update for everyone)
-        const { error } = await supabase.from('games')
+        const { error: updateError } = await supabase.from('games')
             .update({ 
                 players: gameData.players, 
                 current_turn_index: gameData.current_turn_index 
             })
             .eq('room_code', currentRoomId);
 
-        if (error) showToast('Sync error', 'error');
+        if (updateError) return showToast('Failed to save move', 'error');
 
-        // Log it
+        document.getElementById('dice-display').innerText = diceValue;
+        document.getElementById('dice-display').classList.add('dice-roll-anim');
+        setTimeout(() => document.getElementById('dice-display').classList.remove('dice-roll-anim'), 500);
+
         const log = document.getElementById('log-area');
         const riggedTag = rigged ? ' <span class="text-red-500">(Admin Rigged)</span>' : '';
         log.innerHTML += `<p class="text-slate-300">${currentPlayer.name} rolled a ${diceValue}.${riggedTag}</p>`;
         log.scrollTop = log.scrollHeight;
         
-        // Disable button locally until next turn
         document.getElementById('roll-btn').disabled = true;
+        document.querySelectorAll('.rig-btn').forEach(btn => btn.disabled = true);
     }
 
+    // === ON PAGE LOAD ===
+    window.onload = async function() {
+        if (currentRoomId) {
+            const { data, error } = await supabase.from('games').select('*').eq('room_code', currentRoomId).single();
+            if (data && !error) {
+                gameData = data;
+                isAdmin = (data.admin_id === myPlayerId);
+                subscribeToRoom(currentRoomId);
+                handleStateChange();
+            } else {
+                localStorage.removeItem('roomId');
+                currentRoomId = null;
+            }
+        }
+    };
 </script>
 </body>
 </html>

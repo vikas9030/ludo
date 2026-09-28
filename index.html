@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elite 8-Player Board Game (Supabase)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .glass { background: rgba(17, 24, 39, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .toast-in { animation: slideIn 0.3s ease-out; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .dice-roll-anim { animation: shake 0.5s ease-in-out; }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-10px) rotate(10deg); } 75% { transform: translateX(10px) rotate(-10deg); } }
+        .player-token { transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
+    </style>
+</head>
+<body class="bg-slate-950 text-white min-h-screen flex flex-col items-center justify-center p-4">
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed top-5 right-5 space-y-2 z-50"></div>
+
+    <!-- Main Container -->
+    <div class="w-full max-w-5xl mx-auto">
+
+        <!-- Setup Screen -->
+        <div id="setup-screen" class="glass rounded-3xl p-8 shadow-2xl">
+            <h1 class="text-4xl font-extrabold text-center mb-2 bg-gradient-to-r from-indigo-400 to-purple-400 text-transparent bg-clip-text">Elite Board Arena</h1>
+            <p class="text-slate-400 text-center mb-8">Powered by Supabase Realtime</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-slate-800/50 p-6 rounded-2xl border border-slate-700 hover:border-indigo-500 transition-all cursor-pointer" onclick="createRoom('Ludo')">
+                    <div class="text-5xl mb-4">🎲</div>
+                    <h2 class="text-xl font-bold mb-2">Create Ludo Room</h2>
+                    <p class="text-slate-400 text-sm">Become the Admin. Generate a code and invite 7 friends.</p>
+                </div>
+                <div class="bg-slate-800/50 p-6 rounded-2xl border border-slate-700 hover:border-purple-500 transition-all cursor-pointer" onclick="createRoom('SnakeAndLadder')">
+                    <div class="text-5xl mb-4">🐍</div>
+                    <h2 class="text-xl font-bold mb-2">Create S&L Room</h2>
+                    <p class="text-slate-400 text-sm">Snake & Ladder with a party of 8.</p>
+                </div>
+            </div>
+
+            <div class="mt-8 pt-6 border-t border-slate-800">
+                <h3 class="text-lg font-semibold mb-4">Got an invite code?</h3>
+                <div class="flex flex-col md:flex-row gap-3">
+                    <input type="text" id="joinRoomId" placeholder="ENTER CODE" class="bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 flex-1 uppercase tracking-widest focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <input type="text" id="joinName" placeholder="Your Name" class="bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 flex-1 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <button onclick="joinRoom()" class="bg-indigo-600 hover:bg-indigo-700 font-bold px-6 py-3 rounded-xl transition-all">Join Room</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lobby Screen -->
+        <div id="lobby-screen" class="hidden glass rounded-3xl p-8 shadow-2xl">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold">Game Lobby</h2>
+                    <p id="game-type-text" class="text-slate-400">Waiting for players...</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-xs text-slate-500 uppercase tracking-wider">Invite Code</p>
+                    <div class="flex items-center gap-2 mt-1">
+                        <span id="room-code" class="text-2xl font-extrabold tracking-widest text-indigo-400"></span>
+                        <button onclick="copyCode()" class="text-slate-400 hover:text-white">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8" id="player-slots"></div>
+
+            <div class="text-center">
+                <button id="start-btn" class="hidden bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold py-4 px-12 rounded-2xl shadow-lg transition-all transform hover:scale-105" onclick="startGame()">
+                    START GAME
+                </button>
+            </div>
+        </div>
+
+        <!-- Game Screen -->
+        <div id="game-screen" class="hidden">
+            <div class="flex flex-col md:flex-row gap-6">
+                <!-- Left Side: Board & Controls -->
+                <div class="flex-1 glass rounded-3xl p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 id="turn-indicator" class="text-xl font-bold text-indigo-400">Waiting...</h3>
+                        <button onclick="copyCode()" class="text-xs bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-full">Copy Code</button>
+                    </div>
+                    
+                    <div id="game-board" class="relative grid grid-cols-10 gap-0.5 bg-slate-900 p-2 rounded-xl aspect-square"></div>
+
+                    <div id="log-area" class="mt-4 h-24 bg-slate-900/80 rounded-xl p-3 overflow-y-auto text-sm font-mono text-slate-400 border border-slate-800">
+                        <p class="text-slate-500">Game started. Waiting for first roll...</p>
+                    </div>
+                </div>
+
+                <!-- Right Side: Dice & Admin Panel -->
+                <div class="md:w-64 flex flex-col gap-6">
+                    <div class="glass rounded-3xl p-6 flex flex-col items-center">
+                        <h3 class="text-slate-400 uppercase tracking-wider text-xs mb-4">Your Dice</h3>
+                        <div id="dice-display" class="w-20 h-20 bg-slate-800 rounded-2xl flex items-center justify-center text-5xl font-bold text-white shadow-inner mb-4">?</div>
+                        <button id="roll-btn" onclick="rollDice()" disabled class="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-700 disabled:cursor-not-allowed font-bold py-3 rounded-xl transition-all">
+                            Roll Dice
+                        </button>
+                    </div>
+
+                    <!-- Secret Admin Rigging Drawer -->
+                    <div id="admin-panel" class="hidden glass rounded-3xl p-6 border-2 border-dashed border-red-500/50">
+                        <div class="flex items-center gap-2 mb-4">
+                            <span class="text-2xl">🤫</span>
+                            <h3 class="text-red-400 font-bold text-sm uppercase tracking-wider">Admin Rigger</h3>
+                        </div>
+                        <p class="text-xs text-slate-400 mb-4">Choose your next roll.</p>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button class="rig-btn bg-slate-800 hover:bg-red-600 py-2 rounded-lg font-bold" onclick="rigDice(1)">1</button>
+                            <button class="rig-btn bg-slate-800 hover:bg-red-600 py-2 rounded-lg font-bold" onclick="rigDice(2)">2</button>
+                            <button class="rig-btn bg-slate-800 hover:bg-red-600 py-2 rounded-lg font-bold" onclick="rigDice(3)">3</button>
+                            <button class="rig-btn bg-slate-800 hover:bg-red-600 py-2 rounded-lg font-bold" onclick="rigDice(4)">4</button>
+                            <button class="rig-btn bg-slate-800 hover:bg-red-600 py-2 rounded-lg font-bold" onclick="rigDice(5)">5</button>
+                            <button class="rig-btn bg-slate-800 hover:bg-red-600 py-2 rounded-lg font-bold" onclick="rigDice(6)">6</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    // === SUPABASE CONFIG ===
+    // REPLACE THESE WITH YOUR SUPABASE PROJECT DETAILS
+    const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+    const SUPABASE_KEY = 'YOUR_SUPABASE_ANON_KEY';
+    
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // === STATE VARIABLES ===
+    let currentRoomId = null;
+    let myPlayerId = (crypto.randomUUID) ? crypto.randomUUID() : Math.random().toString(36).substring(2);
+    let isAdmin = false;
+    let gameData = null;
+    let subscription = null;
+
+    const colors = ["#6366f1", "#ef4444", "#f97316", "#eab308", "#22c55e", "#06b6d4", "#8b5cf6", "#ec4899"];
+    const setupScreen = document.getElementById('setup-screen');
+    const lobbyScreen = document.getElementById('lobby-screen');
+    const gameScreen = document.getElementById('game-screen');
+
+    // === UI HELPERS ===
+    function showToast(message, type = 'info') {
+        const colors = { error: 'bg-red-500', success: 'bg-green-500', info: 'bg-slate-700' };
+        const toast = document.createElement('div');
+        toast.className = `toast-in ${colors[type]} text-white px-4 py-3 rounded-xl shadow-lg font-medium text-sm`;
+        toast.innerText = message;
+        document.getElementById('toast-container').appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+    }
+
+    function copyCode() {
+        navigator.clipboard.writeText(currentRoomId);
+        showToast('Code copied to clipboard!', 'success');
+    }
+
+    // === SUPABASE REALTIME SUBSCRIPTION ===
+    function subscribeToRoom(roomId) {
+        if (subscription) supabase.removeChannel(subscription);
+        
+        subscription = supabase.channel(`room:${roomId}`)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'games', filter: `room_code=eq.${roomId}` }, payload => {
+                gameData = payload.new;
+                handleStateChange();
+            })
+            .subscribe();
+    }
+
+    function handleStateChange() {
+        if (!gameData) return;
+
+        if (gameData.is_started) {
+            lobbyScreen.classList.add('hidden');
+            gameScreen.classList.remove('hidden');
+            renderGame();
+        } else {
+            setupScreen.classList.add('hidden');
+            lobbyScreen.classList.remove('hidden');
+            renderLobby();
+        }
+    }
+
+    function renderLobby() {
+        document.getElementById('room-code').innerText = gameData.room_code;
+        document.getElementById('game-type-text').innerText = gameData.game_type;
+        
+        if (gameData.admin_id === myPlayerId) {
+            document.getElementById('start-btn').classList.remove('hidden');
+        }
+
+        const slotsContainer = document.getElementById('player-slots');
+        slotsContainer.innerHTML = '';
+        for(let i=0; i<8; i++) {
+            const player = gameData.players[i];
+            const slot = document.createElement('div');
+            slot.className = `p-4 rounded-xl border-2 ${player ? 'border-indigo-500 bg-slate-800/50' : 'border-dashed border-slate-700 bg-slate-900/50'}`;
+            if(player) {
+                slot.innerHTML = `<div class="w-3 h-3 rounded-full mb-2" style="background:${player.color}"></div><p class="font-bold text-sm truncate">${player.name}</p>`;
+            } else {
+                slot.innerHTML = `<div class="w-3 h-3 rounded-full mb-2 bg-slate-700"></div><p class="text-slate-600 text-sm">Empty Slot</p>`;
+            }
+            slotsContainer.appendChild(slot);
+        }
+    }
+
+    function renderGame() {
+        document.getElementById('admin-panel').classList.toggle('hidden', !isAdmin);
+        generateBoard();
+        
+        const turnIndex = gameData.current_turn_index;
+        const currentPlayer = gameData.players[turnIndex];
+        const indicator = document.getElementById('turn-indicator');
+        
+        if(currentPlayer.id === myPlayerId) {
+            indicator.innerText = "Your Turn!";
+            indicator.className = "text-xl font-bold text-green-400";
+            document.getElementById('roll-btn').disabled = false;
+        } else {
+            indicator.innerText = `${currentPlayer.name}'s Turn`;
+            indicator.className = "text-xl font-bold text-indigo-400";
+            document.getElementById('roll-btn').disabled = true;
+        }
+    }
+
+    function generateBoard() {
+        const board = document.getElementById('game-board');
+        board.innerHTML = '';
+        for(let i=0; i<100; i++) {
+            const cell = document.createElement('div');
+            cell.id = `cell-${i}`;
+            cell.className = 'relative bg-slate-800 rounded-sm flex items-center justify-center text-[8px] text-slate-700';
+            cell.innerText = i;
+            board.appendChild(cell);
+        }
+        
+        // Render all player tokens
+        gameData.players.forEach(p => {
+            const cell = document.getElementById(`cell-${p.position}`);
+            if(cell) {
+                const token = document.createElement('div');
+                token.className = 'player-token absolute w-3 h-3 rounded-full shadow-lg border border-white/30';
+                token.style.backgroundColor = p.color;
+                cell.appendChild(token);
+            }
+        });
+    }
+
+    // === DATABASE ACTIONS ===
+
+    // Create Room
+    async function createRoom(gameType) {
+        const roomCode = Math.random().toString(36).substring(2, 6).toUpperCase();
+        const newGame = {
+            room_code: roomCode,
+            game_type: gameType,
+            admin_id: myPlayerId,
+            is_started: false,
+            current_turn_index: 0,
+            players: [{ id: myPlayerId, name: "Admin", position: 0, color: colors[0] }]
+        };
+
+        const { data, error } = await supabase.from('games').insert([newGame]).select().single();
+        if (error) return showToast('Error creating room', 'error');
+        
+        currentRoomId = data.room_code;
+        isAdmin = true;
+        gameData = data;
+        
+        setupScreen.classList.add('hidden');
+        lobbyScreen.classList.remove('hidden');
+        document.getElementById('start-btn').classList.remove('hidden');
+        document.getElementById('room-code').innerText = currentRoomId;
+        
+        subscribeToRoom(currentRoomId);
+        renderLobby();
+    }
+
+    // Join Room
+    async function joinRoom() {
+        const roomId = document.getElementById('joinRoomId').value.trim();
+        const name = document.getElementById('joinName').value.trim() || 'Player';
+        if(!roomId) return showToast('Please enter a room code', 'error');
+
+        const { data, error } = await supabase.from('games').select('*').eq('room_code', roomId).single();
+        if (error || !data) return showToast('Room not found', 'error');
+        if (data.players.length >= 8) return showToast('Room is full', 'error');
+        if (data.is_started) return showToast('Game already started', 'error');
+
+        currentRoomId = data.room_code;
+        gameData = data;
+
+        // Add player to JSONB array
+        const newPlayer = {
+            id: myPlayerId,
+            name: name,
+            position: 0,
+            color: colors[gameData.players.length]
+        };
+        
+        gameData.players.push(newPlayer);
+
+        const { error: updateError } = await supabase.from('games')
+            .update({ players: gameData.players })
+            .eq('room_code', currentRoomId);
+
+        if (updateError) return showToast('Failed to join', 'error');
+
+        setupScreen.classList.add('hidden');
+        lobbyScreen.classList.remove('hidden');
+        document.getElementById('room-code').innerText = currentRoomId;
+        
+        subscribeToRoom(currentRoomId);
+        renderLobby();
+    }
+
+    // Start Game
+    async function startGame() {
+        const { error } = await supabase.from('games')
+            .update({ is_started: true })
+            .eq('room_code', currentRoomId);
+        if (error) showToast('Failed to start game', 'error');
+    }
+
+    // Roll Dice (Normal)
+    async function rollDice() {
+        const diceValue = Math.floor(Math.random() * 6) + 1;
+        await processTurn(diceValue, false);
+    }
+
+    // Admin Rig Dice
+    async function rigDice(value) {
+        if (!isAdmin) return;
+        document.getElementById('dice-display').innerText = value;
+        document.getElementById('dice-display').classList.add('dice-roll-anim');
+        setTimeout(() => document.getElementById('dice-display').classList.remove('dice-roll-anim'), 500);
+        await processTurn(value, true);
+    }
+
+    // Core Turn Logic
+    async function processTurn(diceValue, rigged) {
+        const turnIndex = gameData.current_turn_index;
+        const currentPlayer = gameData.players[turnIndex];
+
+        if (currentPlayer.id !== myPlayerId) return showToast("Not your turn!", "error");
+
+        document.getElementById('dice-display').innerText = diceValue;
+
+        // Update position
+        currentPlayer.position += diceValue;
+        if (currentPlayer.position > 99) currentPlayer.position = 99;
+
+        // Advance turn
+        gameData.current_turn_index = (turnIndex + 1) % gameData.players.length;
+
+        // Update DB (This triggers Realtime update for everyone)
+        const { error } = await supabase.from('games')
+            .update({ 
+                players: gameData.players, 
+                current_turn_index: gameData.current_turn_index 
+            })
+            .eq('room_code', currentRoomId);
+
+        if (error) showToast('Sync error', 'error');
+
+        // Log it
+        const log = document.getElementById('log-area');
+        const riggedTag = rigged ? ' <span class="text-red-500">(Admin Rigged)</span>' : '';
+        log.innerHTML += `<p class="text-slate-300">${currentPlayer.name} rolled a ${diceValue}.${riggedTag}</p>`;
+        log.scrollTop = log.scrollHeight;
+        
+        // Disable button locally until next turn
+        document.getElementById('roll-btn').disabled = true;
+    }
+
+</script>
+</body>
+</html>
